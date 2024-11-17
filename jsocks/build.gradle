@@ -11,4 +11,4 @@ buildscript {
 
 apply plugin: 'java'
 apply plugin: 'com.jfrog.bintray'
-apply from: "${rootDir}/publish.gradle"
+// apply from: "${rootDir}/publish.gradle"
