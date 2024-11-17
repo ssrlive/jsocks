@@ -1,64 +1,68 @@
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
 
 task sourcesJar(type: Jar, dependsOn: classes) { 
-  classifier = 'sources'
+  archiveClassifier.set('sources')
   from sourceSets.main.allSource
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) { 
-  classifier = 'javadoc'
+  archiveClassifier.set('javadoc')
   from javadoc.destinationDir
 }
 
-artifacts { 
-  archives sourcesJar, javadocJar
-}
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+      artifact sourcesJar
+      artifact javadocJar
 
-uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-    }
-  }
-}
-
-install {
-  repositories.mavenInstaller {
-    pom {
-      project {
-        name project.name
-        description project.description
-        url gitHubUrl
+      pom {
+        name = project.name
+        description = project.description
+        url = gitHubUrl
         licenses {
           license {
-            name 'LGPL 2.1 license'
-            url 'http://www.opensource.org/licenses/lgpl-2.1.php'
+            name = 'LGPL 2.1 license'
+            url = 'http://www.opensource.org/licenses/lgpl-2.1.php'
           }
         }
         developers {
           developer {
-            id 'kruton'
-            name 'Kenny Root'
-            email 'kenny@the-b.org'
+            id = 'kruton'
+            name = 'Kenny Root'
+            email = 'kenny@the-b.org'
           }
         }
         scm {
-          connection "${gitHubUrl}.git"
-          developerConnection "${gitHubUrl}.git"
-          url gitHubUrl
+          connection = "${gitHubUrl}.git"
+          developerConnection = "${gitHubUrl}.git"
+          url = "https://github.com/ssrlive/jsocks"
         }
       }
     }
   }
+
+  repositories {
+    maven {
+      url = uri("file://${buildDir}/repo")
+    }
+  }
 }
 
-//Load data from environment if present to support Travis
-['bintrayUser', 'bintrayApiKey'].each{
-  if (System.env[it])
-    project[it] = System.env[it]
+signing {
+  sign publishing.publications.mavenJava
 }
 
-//This is only needed if bintrayUpload is done as part of releasing
+// Load data from environment if present to support Travis
+['bintrayUser', 'bintrayApiKey'].each {
+  if (System.getenv(it)) {
+    project.ext[it] = System.getenv(it)
+  }
+}
+
+// This is only needed if bintrayUpload is done as part of releasing
 task updateBintrayVersion {
   doLast {
     bintray.pkg.version.name = project.version
@@ -67,8 +71,8 @@ task updateBintrayVersion {
 bintrayUpload.dependsOn updateBintrayVersion
 
 bintray {
-  user = bintrayUser
-  key = bintrayApiKey
+  user = project.ext.bintrayUser
+  key = project.ext.bintrayApiKey
   publish = true
   pkg {
     repo = 'maven'
@@ -83,6 +87,6 @@ bintray {
 }
 
 bintrayUpload.onlyIf {
-  System.env.TRAVIS_JDK_VERSION == officialJdk &&
+  System.getenv('TRAVIS_JDK_VERSION') == officialJdk &&
   !(version ==~ /.*SNAPSHOT/)
 }
